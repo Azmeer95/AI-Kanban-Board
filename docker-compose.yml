@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      KANBAN_DB_PATH: /app/backend/data/kanban.db
+    volumes:
+      - ./backend/data:/app/backend/data

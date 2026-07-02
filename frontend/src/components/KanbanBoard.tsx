@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,11 +13,14 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
+import { AiChat } from "@/components/AiChat";
 import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
+import { fetchBoard, saveBoard } from "@/lib/api";
 
 export const KanbanBoard = () => {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -25,7 +28,31 @@ export const KanbanBoard = () => {
     })
   );
 
+  useEffect(() => {
+    const loadBoard = async () => {
+      try {
+        const remoteBoard = await fetchBoard();
+        setBoard(remoteBoard);
+      } catch {
+        setBoard(initialData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadBoard();
+  }, []);
+
   const cardsById = useMemo(() => board.cards, [board.cards]);
+
+  const persistBoard = async (nextBoard: BoardData) => {
+    setBoard(nextBoard);
+    try {
+      await saveBoard(nextBoard);
+    } catch {
+      // Keep UI responsive even if the save request fails.
+    }
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);
@@ -39,40 +66,52 @@ export const KanbanBoard = () => {
       return;
     }
 
-    setBoard((prev) => ({
-      ...prev,
-      columns: moveCard(prev.columns, active.id as string, over.id as string),
-    }));
+    setBoard((prev) => {
+      const nextBoard = {
+        ...prev,
+        columns: moveCard(prev.columns, active.id as string, over.id as string),
+      };
+      void saveBoard(nextBoard);
+      return nextBoard;
+    });
   };
 
   const handleRenameColumn = (columnId: string, title: string) => {
-    setBoard((prev) => ({
-      ...prev,
-      columns: prev.columns.map((column) =>
-        column.id === columnId ? { ...column, title } : column
-      ),
-    }));
+    setBoard((prev) => {
+      const nextBoard = {
+        ...prev,
+        columns: prev.columns.map((column) =>
+          column.id === columnId ? { ...column, title } : column
+        ),
+      };
+      void saveBoard(nextBoard);
+      return nextBoard;
+    });
   };
 
   const handleAddCard = (columnId: string, title: string, details: string) => {
     const id = createId("card");
-    setBoard((prev) => ({
-      ...prev,
-      cards: {
-        ...prev.cards,
-        [id]: { id, title, details: details || "No details yet." },
-      },
-      columns: prev.columns.map((column) =>
-        column.id === columnId
-          ? { ...column, cardIds: [...column.cardIds, id] }
-          : column
-      ),
-    }));
+    setBoard((prev) => {
+      const nextBoard = {
+        ...prev,
+        cards: {
+          ...prev.cards,
+          [id]: { id, title, details: details || "No details yet." },
+        },
+        columns: prev.columns.map((column) =>
+          column.id === columnId
+            ? { ...column, cardIds: [...column.cardIds, id] }
+            : column
+        ),
+      };
+      void saveBoard(nextBoard);
+      return nextBoard;
+    });
   };
 
   const handleDeleteCard = (columnId: string, cardId: string) => {
     setBoard((prev) => {
-      return {
+      const nextBoard = {
         ...prev,
         cards: Object.fromEntries(
           Object.entries(prev.cards).filter(([id]) => id !== cardId)
@@ -86,10 +125,20 @@ export const KanbanBoard = () => {
             : column
         ),
       };
+      void saveBoard(nextBoard);
+      return nextBoard;
     });
   };
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface)] text-sm font-semibold uppercase tracking-[0.3em] text-[var(--gray-text)]">
+        Loading your board...
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden">
@@ -139,17 +188,20 @@ export const KanbanBoard = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <section className="grid gap-6 lg:grid-cols-5">
-            {board.columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                cards={column.cardIds.map((cardId) => board.cards[cardId])}
-                onRename={handleRenameColumn}
-                onAddCard={handleAddCard}
-                onDeleteCard={handleDeleteCard}
-              />
-            ))}
+          <section className="grid gap-6 xl:grid-cols-[1.8fr_0.8fr]">
+            <div className="grid gap-6 lg:grid-cols-5">
+              {board.columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                  onRename={handleRenameColumn}
+                  onAddCard={handleAddCard}
+                  onDeleteCard={handleDeleteCard}
+                />
+              ))}
+            </div>
+            <AiChat onBoardRefresh={() => void fetchBoard().then(setBoard)} />
           </section>
           <DragOverlay>
             {activeCard ? (
