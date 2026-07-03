@@ -3,12 +3,11 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 if (-not (Test-Path ".venv")) {
-  py -m venv .venv
+  uv venv
 }
 
 . ".\.venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip | Out-Null
-python -m pip install -r backend/requirements.txt | Out-Null
+uv pip install -r backend/requirements.txt | Out-Null
 
 if (-not (Test-Path "frontend/node_modules")) {
   npm --prefix frontend install | Out-Null

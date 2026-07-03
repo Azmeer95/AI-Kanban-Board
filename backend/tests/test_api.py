@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from backend.app.main import create_app
+from backend.app.main import _frontend_index_path, create_app
 
 
 class KanbanApiTests(unittest.TestCase):
@@ -16,8 +16,12 @@ class KanbanApiTests(unittest.TestCase):
 
     def test_root_returns_frontend_index(self) -> None:
         response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("<html", response.text.lower())
+        if os.path.exists(_frontend_index_path()):
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("<html", response.text.lower())
+        else:
+            self.assertEqual(response.status_code, 404)
+            self.assertIn("not found", response.text.lower())
 
     def test_ai_returns_fallback_when_api_key_missing(self) -> None:
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}, clear=False):

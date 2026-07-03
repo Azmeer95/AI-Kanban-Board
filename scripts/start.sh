@@ -3,10 +3,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-python3 -m venv .venv
+if [ ! -d .venv ]; then
+  uv venv
+fi
 source .venv/bin/activate
-pip install --upgrade pip >/dev/null
-pip install -r backend/requirements.txt >/dev/null
+uv pip install -r backend/requirements.txt >/dev/null
 
 if [ ! -d frontend/node_modules ]; then
   npm --prefix frontend install

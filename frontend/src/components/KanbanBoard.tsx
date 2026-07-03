@@ -21,6 +21,7 @@ export const KanbanBoard = () => {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -49,8 +50,9 @@ export const KanbanBoard = () => {
     setBoard(nextBoard);
     try {
       await saveBoard(nextBoard);
+      setSaveError(null);
     } catch {
-      // Keep UI responsive even if the save request fails.
+      setSaveError("Could not save board changes. Check your connection.");
     }
   };
 
@@ -71,7 +73,7 @@ export const KanbanBoard = () => {
         ...prev,
         columns: moveCard(prev.columns, active.id as string, over.id as string),
       };
-      void saveBoard(nextBoard);
+      void saveBoard(nextBoard).catch(() => setSaveError("Could not save board changes."));
       return nextBoard;
     });
   };
@@ -84,7 +86,7 @@ export const KanbanBoard = () => {
           column.id === columnId ? { ...column, title } : column
         ),
       };
-      void saveBoard(nextBoard);
+      void saveBoard(nextBoard).catch(() => setSaveError("Could not save board changes."));
       return nextBoard;
     });
   };
@@ -104,7 +106,7 @@ export const KanbanBoard = () => {
             : column
         ),
       };
-      void saveBoard(nextBoard);
+      void saveBoard(nextBoard).catch(() => setSaveError("Could not save board changes."));
       return nextBoard;
     });
   };
@@ -125,7 +127,7 @@ export const KanbanBoard = () => {
             : column
         ),
       };
-      void saveBoard(nextBoard);
+      void saveBoard(nextBoard).catch(() => setSaveError("Could not save board changes."));
       return nextBoard;
     });
   };
@@ -201,6 +203,11 @@ export const KanbanBoard = () => {
                 />
               ))}
             </div>
+            {saveError && (
+              <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow-lg">
+                {saveError}
+              </div>
+            )}
             <AiChat onBoardRefresh={() => void fetchBoard().then(setBoard)} />
           </section>
           <DragOverlay>

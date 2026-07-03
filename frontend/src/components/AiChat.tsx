@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { fetchBoard } from "@/lib/api";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 type AiChatProps = {
   onBoardRefresh?: () => void;
@@ -26,7 +27,7 @@ export const AiChat = ({ onBoardRefresh }: AiChatProps) => {
         return;
       }
 
-      const response = await fetch("http://localhost:8000/api/ai/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,7 +45,6 @@ export const AiChat = ({ onBoardRefresh }: AiChatProps) => {
       if (onBoardRefresh) {
         onBoardRefresh();
       }
-      await fetchBoard();
     } catch {
       setReply("The AI helper is not available right now.");
     } finally {

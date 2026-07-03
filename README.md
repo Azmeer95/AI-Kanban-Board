@@ -2,7 +2,7 @@
 
 This project now includes a simple local MVP with:
 - a login screen using the demo credentials user / password
-- a persistent Kanban board backed by a FastAPI API and local JSON storage
+- a persistent Kanban board backed by a FastAPI API and SQLite database
 - Docker-ready startup scripts for local development
 
 ## Run locally

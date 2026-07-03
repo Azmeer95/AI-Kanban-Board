@@ -2,16 +2,17 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from pathlib import Path
 
 from backend.app.storage import BoardStore
 
 
 class BoardStoreTests(unittest.TestCase):
     def test_save_and_load_board(self) -> None:
-        temp_dir = tempfile.mkdtemp(prefix="kanban-test-", dir=".")
-        db_path = os.path.join(temp_dir, "kanban.db")
+        temp_dir = Path(tempfile.mkdtemp(prefix="kanban-test-"))
+        db_path = temp_dir / "kanban.db"
         try:
-            store = BoardStore(db_path=db_path)
+            store = BoardStore(db_path=str(db_path))
             board = {
                 "columns": [{"id": "col-1", "title": "Backlog", "cardIds": []}],
                 "cards": {},
@@ -27,15 +28,14 @@ class BoardStoreTests(unittest.TestCase):
                 self.assertIsNotNone(row)
         finally:
             try:
-                if os.path.exists(db_path):
-                    os.remove(db_path)
+                if db_path.exists():
+                    db_path.unlink()
             except PermissionError:
                 pass
-            if os.path.isdir(temp_dir):
-                try:
-                    os.rmdir(temp_dir)
-                except OSError:
-                    pass
+            try:
+                temp_dir.rmdir()
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":
