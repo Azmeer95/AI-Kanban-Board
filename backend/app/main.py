@@ -4,6 +4,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -57,6 +58,10 @@ def _frontend_index_path() -> str:
     return os.path.join(os.path.dirname(__file__), "..", "..", "frontend", ".next", "server", "app", "index.html")
 
 
+def _frontend_static_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "frontend" / ".next" / "static"
+
+
 def create_app() -> FastAPI:
     return app
 
@@ -89,6 +94,15 @@ def serve_frontend() -> FileResponse:
     if os.path.exists(index_path):
         return FileResponse(index_path)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Frontend build not found")
+
+
+@app.get("/_next/static/{asset_path:path}")
+def serve_next_static(asset_path: str) -> FileResponse:
+    static_root = _frontend_static_path()
+    asset = (static_root / asset_path).resolve()
+    if static_root in asset.parents and asset.exists() and asset.is_file():
+        return FileResponse(asset)
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
 
 @app.post("/api/login", response_model=TokenResponse)
